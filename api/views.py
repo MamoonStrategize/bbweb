@@ -78,22 +78,24 @@ def signup_and_send_data(request):
             },
             data=json.dumps(firestore_data)
         )
-                
+             
+        if firestore_response.status_code == 200:
         # Data for email verification
-        email_verification_data = {
-            "requestType": "VERIFY_EMAIL",
-            "idToken": signup_response.json().get('idToken')
-        }
+            email_verification_data = {
+                "requestType": "VERIFY_EMAIL",
+                "idToken": signup_response.json().get('idToken')
+            }
 
-        # Make request to email verification API
-        email_verification_response = requests.post(
-            f'https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key={api_key}',
-            headers={'Content-Type': 'application/json'},
-            data=json.dumps(email_verification_data)
-        )
+            # Make request to email verification API
+            email_verification_response = requests.post(
+                f'https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key={api_key}',
+                headers={'Content-Type': 'application/json'},
+                data=json.dumps(email_verification_data)
+            )
 
-        return JsonResponse({'message': 'Verification email sent. Please verify your email.', 'status_code': signup_response.status_code })
-
+            return JsonResponse({'message': 'Verification email sent. Please verify your email.', 'status_code': signup_response.status_code })
+        else:
+            return JsonResponse({'message': 'Failed to save data in DB','status': firestore_response.json(), 'status_code': firestore_response.status_code })
     else:
         return JsonResponse({'message': 'Email already exists.', 'status': signup_response.json()["error"]["message"], 'status_code': signup_response.status_code })
 
