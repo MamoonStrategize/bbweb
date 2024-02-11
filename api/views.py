@@ -1,6 +1,6 @@
 import os
 from django.views.decorators.csrf import csrf_exempt
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 import requests
 import json
 from django.contrib.sessions.models import Session
@@ -178,7 +178,7 @@ def signin_and_check_email_verification(request):
     )
 
     if not firestore_response.ok:
-        return JsonResponse({'error': 'Failed to check account status in Firestore.'}, status=firestore_response.status_code)
+        return JsonResponse({'error': 'Failed to check account status in Firestore.', 'response':firestore_response.json()}, status=firestore_response.status_code)
 
     status = firestore_response.json().get('fields', {}).get('status', {}).get('stringValue')
     localACtype = firestore_response.json().get('fields', {}).get('type', {}).get('stringValue')
@@ -706,6 +706,10 @@ def get_teacher_cohort(request):
         json=firestore_update_data
     )
 
+    if not any('document' in item for item in firestore_query_response.json()):
+        sorted_data = []
+        return JsonResponse(sorted_data, safe=False)  # Return the processed data as a JSON response
+
     # Check the type of the response
     if firestore_query_response.status_code != 200:
         return JsonResponse({'error': f'Failed to retrieve student data: {firestore_query_response.text}'}, status=firestore_query_response.status_code)
@@ -1104,9 +1108,15 @@ def get_student_data_cohort(request):
         json=firestore_update_data
     )
 
+
+    # return HttpResponse(firestore_query_response.status_code)
     # Check the type of the response
     if firestore_query_response.status_code != 200:
         return JsonResponse({'error': f'Failed to retrieve student data: {firestore_query_response.text}'}, status=firestore_query_response.status_code)
+
+    if not any('document' in item for item in firestore_query_response.json()):
+        sorted_data = []
+        return JsonResponse(sorted_data, safe=False)  # Return the processed data as a JSON response
 
     # Assuming the response is JSON, you can parse it as follows
     response_data = firestore_query_response.json()
@@ -1155,4 +1165,5 @@ def get_student_data_cohort(request):
             transformed_data.append(transformed_item)
     sorted_data = sorted(transformed_data, key=itemgetter('marketCap'), reverse=True)
     return JsonResponse(sorted_data, safe=False)  # Return the processed data as a JSON response
+
 
