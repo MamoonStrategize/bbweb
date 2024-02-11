@@ -639,38 +639,42 @@ def invitation_teacher(request):
                 },
                 data=json.dumps(firestore_data)
             )
-                    
-            # Data for email verification
-            email_verification_data = {
-                "requestType": "VERIFY_EMAIL",
-                "idToken": signup_response.json().get('idToken')
-            }
+            
+            if signup_response.status_code == 200:
+       
+                # Data for email verification
+                email_verification_data = {
+                    "requestType": "VERIFY_EMAIL",
+                    "idToken": signup_response.json().get('idToken')
+                }
 
-            # Make request to email verification API
-            email_verification_response = requests.post(
-                f'https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key={api_key}',
-                headers={
-                    'Content-Type': 'application/json',
-                },
-                data=json.dumps(email_verification_data)
-            )
-            if not email_verification_response.ok:
-                return JsonResponse({'error': "Failed to send invitation", 'response': email_verification_response.json()})
+                # Make request to email verification API
+                email_verification_response = requests.post(
+                    f'https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key={api_key}',
+                    headers={
+                        'Content-Type': 'application/json',
+                    },
+                    data=json.dumps(email_verification_data)
+                )
+                if not email_verification_response.ok:
+                    return JsonResponse({'error': "Failed to send invitation", 'response': email_verification_response.json()})
 
-            # Data for email RESET
-            email_RESET_data = {
-                "requestType": "PASSWORD_RESET",
-                "email": email
-            }
+                # Data for email RESET
+                email_RESET_data = {
+                    "requestType": "PASSWORD_RESET",
+                    "email": email
+                }
 
-            # Make request to email RESET API
-            email_RESET_response = requests.post(
-                f'https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key={api_key}',
-                headers={'Content-Type': 'application/json'},
-                data=json.dumps(email_RESET_data)
-            )
-            if not email_RESET_response.ok:
-                return JsonResponse({'error': "Failed to send password reset email"})
+                # Make request to email RESET API
+                email_RESET_response = requests.post(
+                    f'https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key={api_key}',
+                    headers={'Content-Type': 'application/json'},
+                    data=json.dumps(email_RESET_data)
+                )
+                if not email_RESET_response.ok:
+                    return JsonResponse({'error': "Failed to send password reset email"})
+            else:
+                return JsonResponse({'message': 'Failed to save data in DB','status': firestore_response.json(), 'status_code': firestore_response.status_code })
 
             return JsonResponse({'message': 'Successfully invited student.', 'status':'SENT'})
         else:
