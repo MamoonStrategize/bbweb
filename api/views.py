@@ -612,70 +612,67 @@ def invitation_teacher(request):
         country = firestore_response_get.json().get('fields', {}).get('country', {}).get('stringValue', '')
 
         # Check if signup was successful
-        if signup_response.status_code == 200:
             # Data for firestore
-            firestore_data = {
-                "fields": {
-                    "firstname": {"stringValue": firstname},
-                    "lastname": {"stringValue": lastname},
-                    "email": {"stringValue": email},
-                    "institute": {"stringValue": institute},
-                    "country": {"stringValue": country},
-                    "cohort": {"stringValue": cohort},
-                    "status": {"stringValue": "Active"},
-                    "type": {"stringValue": "student"},
-                    "tracks": {"integerValue": 0},
-                    "marketCap": {"integerValue": 0}
-                }
+        firestore_data = {
+            "fields": {
+                "firstname": {"stringValue": firstname},
+                "lastname": {"stringValue": lastname},
+                "email": {"stringValue": email},
+                "institute": {"stringValue": institute},
+                "country": {"stringValue": country},
+                "cohort": {"stringValue": cohort},
+                "status": {"stringValue": "Active"},
+                "type": {"stringValue": "student"},
+                "tracks": {"integerValue": 0},
+                "marketCap": {"integerValue": 0}
+            }
+        }
+
+        # Make request to Firestore API
+        std_doc_ID = signup_response.json().get('localId')
+        firestore_response = requests.post(
+            f'https://firestore.googleapis.com/v1/projects/{project_id}/databases/(default)/documents/regUser?documentId={std_doc_ID}',
+            headers={
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer {}'.format(signup_response.json().get('idToken'))
+            },
+            data=json.dumps(firestore_data)
+        )
+        
+        if signup_response.status_code == 200:
+    
+            # Data for email verification
+            email_verification_data = {
+                "requestType": "VERIFY_EMAIL",
+                "idToken": signup_response.json().get('idToken')
             }
 
-            # Make request to Firestore API
-            std_doc_ID = signup_response.json().get('localId')
-            firestore_response = requests.post(
-                f'https://firestore.googleapis.com/v1/projects/{project_id}/databases/(default)/documents/regUser?documentId={std_doc_ID}',
+            # Make request to email verification API
+            email_verification_response = requests.post(
+                f'https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key={api_key}',
                 headers={
                     'Content-Type': 'application/json',
-                    'Authorization': 'Bearer {}'.format(signup_response.json().get('idToken'))
                 },
-                data=json.dumps(firestore_data)
+                data=json.dumps(email_verification_data)
             )
-            
-            if signup_response.status_code == 200:
-       
-                # Data for email verification
-                email_verification_data = {
-                    "requestType": "VERIFY_EMAIL",
-                    "idToken": signup_response.json().get('idToken')
-                }
+            if not email_verification_response.ok:
+                return JsonResponse({'error': "Failed to send invitation", 'response': email_verification_response.json()})
 
-                # Make request to email verification API
-                email_verification_response = requests.post(
-                    f'https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key={api_key}',
-                    headers={
-                        'Content-Type': 'application/json',
-                    },
-                    data=json.dumps(email_verification_data)
-                )
-                if not email_verification_response.ok:
-                    return JsonResponse({'error': "Failed to send invitation", 'response': email_verification_response.json()})
+            # Data for email RESET
+            email_RESET_data = {
+                "requestType": "PASSWORD_RESET",
+                "email": email
+            }
 
-                # Data for email RESET
-                email_RESET_data = {
-                    "requestType": "PASSWORD_RESET",
-                    "email": email
-                }
-
-                # Make request to email RESET API
-                email_RESET_response = requests.post(
-                    f'https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key={api_key}',
-                    headers={'Content-Type': 'application/json'},
-                    data=json.dumps(email_RESET_data)
-                )
-                if not email_RESET_response.ok:
-                    return JsonResponse({'error': "Failed to send password reset email"})
-            else:
-                return JsonResponse({'message': 'Failed to save data in DB','status': firestore_response.json(), 'status_code': firestore_response.status_code })
-
+            # Make request to email RESET API
+            email_RESET_response = requests.post(
+                f'https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key={api_key}',
+                headers={'Content-Type': 'application/json'},
+                data=json.dumps(email_RESET_data)
+            )
+            if not email_RESET_response.ok:
+                return JsonResponse({'error': "Failed to send password reset email"})
+                
             return JsonResponse({'message': 'Successfully invited student.', 'status':'SENT'})
         else:
             return JsonResponse({'error': 'Invitaion is already sent.', 'status': 'ALREADY_SENT'}, status=signup_response.status_code)
