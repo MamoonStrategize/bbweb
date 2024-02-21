@@ -31,6 +31,8 @@ def signup_and_send_data(request):
         acType = data.get('acType')
         tracks = 0
         marketCap = 0
+        licenses = 0
+        pStatus = 'free'
     except json.JSONDecodeError:
         return JsonResponse({'error': 'Invalid JSON format in request body.'}, status=400)
 
@@ -64,7 +66,9 @@ def signup_and_send_data(request):
                 "status": {"stringValue": status},
                 "type": {"stringValue": acType},
                 "tracks": {"integerValue": tracks},
-                "marketCap": {"integerValue": marketCap}
+                "marketCap": {"integerValue": marketCap},
+                "licenses": {"integerValue": licenses},
+                "pStatus": {"integerValue": pStatus}
             }
         }
 
@@ -187,6 +191,8 @@ def signin_and_check_email_verification(request):
     firstName = firestore_response.json().get('fields', {}).get('firstname', {}).get('stringValue')
     lastName = firestore_response.json().get('fields', {}).get('lastname', {}).get('stringValue')
     cohort = firestore_response.json().get('fields', {}).get('cohort', {}).get('stringValue')
+    licenses = firestore_response.json().get('fields', {}).get('licenses', {}).get('stringValue')
+    pStatus = firestore_response.json().get('fields', {}).get('pStatus', {}).get('stringValue')
     
     country = firestore_response.json().get('fields', {}).get('country', {}).get('stringValue')
     institute = firestore_response.json().get('fields', {}).get('institute', {}).get('stringValue')
@@ -196,7 +202,7 @@ def signin_and_check_email_verification(request):
 
     
     return JsonResponse({'message': 'Email verified. Account is active.',
-                         'user':{'type': localACtype, 'first_name': firstName, 'last_name': lastName, 'cohort': cohort, 'country': country, 'institute':institute, 'token': user_id_token, 'localId': doc_ID }, 'status_code':firestore_response.status_code})
+                         'user':{'type': localACtype, 'first_name': firstName, 'last_name': lastName, 'cohort': cohort, 'country': country, 'institute':institute, 'token': user_id_token, 'localId': doc_ID, 'licenses': licenses, 'pStatus': pStatus}, 'status_code':firestore_response.status_code})
 
 @csrf_exempt
 def reset_password(request):
@@ -495,8 +501,6 @@ def get_all_cohorts(request):
 
         cohort_counts.append(str(cohort_count))
         
-    print(existing_cohorts)  
-    print(cohort_counts)  
     cohorts = ','.join(existing_cohorts).split(',')
     entries = ','.join(cohort_counts).split(',')
 
@@ -535,7 +539,6 @@ def suspend_student(request):
         # Handle response from Firestore API
     if firestore_response_get.ok:
         # Extract existing data and update status
-        print(firestore_response_get.json())
         existing_data = firestore_response_get.json().get('fields', {})
         existing_data['status'] = {'stringValue': newStatus}
 
@@ -796,8 +799,6 @@ def get_student_data_country(request):
 
     # Format the start date as an ISO 8601 string with 'Z' indicating UTC timezone
     start_date_iso = start_date.strftime('%Y-%m-%dT%H:%M:%SZ')
-    print(start_date)
-    print(start_date_iso)
 
     firestore_update_data = {
         "structuredQuery": {
@@ -906,8 +907,6 @@ def get_student_data_institute(request):
 
     # Format the start date as an ISO 8601 string with 'Z' indicating UTC timezone
     start_date_iso = start_date.strftime('%Y-%m-%dT%H:%M:%SZ')
-    print(start_date)
-    print(start_date_iso)
 
     firestore_update_data = {
         "structuredQuery": {
@@ -1005,8 +1004,6 @@ def get_student_data_international(request):
 
     # Format the start date as an ISO 8601 string with 'Z' indicating UTC timezone
     start_date_iso = start_date.strftime('%Y-%m-%dT%H:%M:%SZ')
-    print(start_date)
-    print(start_date_iso)
 
 
     firestore_query_response = requests.get(
@@ -1089,8 +1086,6 @@ def get_student_data_cohort(request):
 
     # Format the start date as an ISO 8601 string with 'Z' indicating UTC timezone
     start_date_iso = start_date.strftime('%Y-%m-%dT%H:%M:%SZ')
-    print(start_date)
-    print(start_date_iso)
 
     firestore_update_data = {
         "structuredQuery": {
